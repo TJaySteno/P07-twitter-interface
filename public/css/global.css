@@ -2284,7 +2284,6 @@ a:hover .app--avatar {
 /* line 131, ../sass/global.sass */
 .app--tweet--list, .app--user--list {
   list-style: none;
-  padding-bottom: 195px;
 }
 /* line 134, ../sass/global.sass */
 .app--tweet--list > li, .app--user--list > li {
@@ -2298,7 +2297,8 @@ a:hover .app--avatar {
   display: table;
 }
 /* line 5, ../sass/circle/core/_mixins.sass */
-.app--tweet--list > li:after, .app--user--list > li:after {
+.app--tweet--list:last-child, .app--user--list:last-child {
+  padding-bottom: 195px;
   clear: both;
 }
 /* line 139, ../sass/global.sass */

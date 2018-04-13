@@ -4,7 +4,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start": "node js/app.js"
+    "start": "node js/app.js",
+    "test": "nodemon js/app.js"
   },
   "author": "",
   "license": "ISC",
@@ -12,5 +13,8 @@
     "express": "^4.16.3",
     "pug": "^2.0.3",
     "twit": "^2.2.9"
+  },
+  "devDependencies": {
+    "nodemon": "^1.17.3"
   }
 }
