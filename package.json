@@ -4,12 +4,12 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start": "node js/app.js",
-    "test": "nodemon js/app.js"
+    "start": "node app.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^1.18.2",
     "express": "^4.16.3",
     "pug": "^2.0.3",
     "twit": "^2.2.9"
