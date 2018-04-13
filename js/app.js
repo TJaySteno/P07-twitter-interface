@@ -96,13 +96,13 @@ app.get('/', async (req, res, next) => {
       const time = Math.round((now - timestamp)
                                   / (60*60*1000));
 
+      // dynamic messages: just now, x hours ago, 1 day ago
+
       return time + ' hours ago';
     }
 
     async function trimMessages (messageData, self) {
       const messages = {};
-      const senderID = messageData[0].message_create.sender_id;
-      const recipientID = messageData[0].message_create.target.recipient_id;
 
       messages.them = await getThem(messageData[0].message_create, self);
 
@@ -112,17 +112,25 @@ app.get('/', async (req, res, next) => {
       });
 
       messages.conversation = [];
-      oneConvo.forEach((message, i) => {
-        const conversation = {
-          text: message.message_create.message_data.text,
-          timestamp: getMessageTimeDiff(message.created_timestamp)
+
+      for (let i = 0; i < 5; i++) {
+        const message = {
+          text: oneConvo[i].message_create.message_data.text,
+          timestamp: getMessageTimeDiff(oneConvo[i].created_timestamp)
         };
 
-        if (recipientID === messages.them.user_id) conversation.source = 'me';
-        else if (senderID === messages.them.user_id) conversation.source = 'them';
+        const senderID = oneConvo[i].message_create.sender_id;
+        const recipientID = oneConvo[i].message_create.target.recipient_id;
 
-        messages.conversation.push(conversation);
-      });
+        if (senderID === messages.them.user_id) message.source = 'them';
+        else message.source = 'me';
+        console.log(message.source);
+
+        messages.conversation.push(message);
+      };
+
+      messages.conversation.reverse();
+      console.log(messages.conversation);
 
       return messages;
     }

@@ -2431,6 +2431,7 @@ a:hover .app--avatar {
 /* line 225, ../sass/global.sass */
 .app--message--conversation {
   margin: 0;
+  padding-bottom: 195px;
 }
 /* line 228, ../sass/global.sass */
 .app--message--text {
