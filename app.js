@@ -1,7 +1,9 @@
 'use strict'
+
 /************************************************
   DEPENDENCIES AND CREATE ROUTER
 ************************************************/
+
 const express = require('express');
 const pug = require('pug');
 const bodyParser = require('body-parser')
@@ -17,13 +19,13 @@ app.set('view engine', 'pug');
   GENERAL FUNCTIONS
 ************************************************/
 
+// General 'twit' query function
 function getFromTwitter (extension, options) {
-  return T.get(extension, options, (err, data, res) => {
-    if (err) throw err;
-    return data;
-  });
+  return T.get(extension, options, (err, data, res) => data)
+    .catch(err => { throw err });
 }
 
+// Format time (passed in seconds) into a readable 'long' or 'short' timestamp
 function getTimestampMessage (time, length) {
   if (time < 60) return time + (length === 'long' ? ' seconds ago' : 's');
   else if (time < 60*60) return Math.round(time/60) + (length === 'long' ? ' minutes ago' : 'm');
@@ -35,6 +37,7 @@ function getTimestampMessage (time, length) {
   PROFILE.SELF
 ************************************************/
 
+// Trim down 'self.data' object to the essentials
 function trimSelfInfo (self) {
   return {
     screen_name: `@${self.screen_name}`,
@@ -49,6 +52,7 @@ function trimSelfInfo (self) {
   PROFILE.TIMELINE
 ************************************************/
 
+// Trim down 'timeline.data' object to the essentials
 function trimTimeline (tweets) {
   const timeline = [];
   tweets.forEach(tweet => {
@@ -67,6 +71,9 @@ function trimTimeline (tweets) {
   return timeline;
 }
 
+/***** TIMELINE FUNCTIONS **********************/
+
+// Calculate the time difference between now and a timeline post; returns short-form timestamp
 function getTimelineTimestamp (tweet) {
   const now = new Date();
   const offset = tweet.user.utc_offset;
@@ -80,6 +87,7 @@ function getTimelineTimestamp (tweet) {
   PROFILE.FOLLOWING
 ************************************************/
 
+// Trim down 'following.data' object to the essentials
 function trimFollowing (users) {
   const following = [];
   users.forEach(user => {
@@ -97,30 +105,22 @@ function trimFollowing (users) {
   PROFILE.MESSAGES
 ************************************************/
 
-async function trimMessages (messageData, self) {
-  const messages = { conversation: [] };
+// Trim down 'messages.data' object to the essentials
+async function trimMessages (rawData, self) {
+  const messages = {};
 
-  messages.friend = await getFriendInfo(messageData[0].message_create, self);
-  const conversation = filterSingleConversation(messageData, messages);
+  messages.friend = await getFriendInfo(rawData[0].message_create, self);
 
-  for (let i = 0; i < 5; i++) {
-    const message = {
-      text: conversation[i].message_create.message_data.text,
-      timestamp: getMessageTimeDiff(conversation[i].created_timestamp)
-    };
-
-    const sender = conversation[i].message_create.sender_id;
-    if (sender === messages.friend.user_id) message.source = 'friend';
-    else message.source = 'me';
-
-    messages.conversation.push(message);
-  };
-
+  const rawConversation = filterSingleConversation(rawData, messages.friend);
+  messages.conversation = trimConversation(rawConversation, messages.friend)
   messages.conversation.reverse();
 
   return messages;
 }
 
+/***** MESSAGE FUNCTIONS ***********************/
+
+// Using the most recent message, figure out who the other party is; return an object containing their info
 async function getFriendInfo (message, self) {
   const recipient = await getFromTwitter('users/lookup', { user_id: message.target.recipient_id });
   const sender = await getFromTwitter('users/lookup', { user_id: message.sender_id });
@@ -140,27 +140,52 @@ async function getFriendInfo (message, self) {
   } else { throw new Error('There was trouble retrieving your messages.') }
 }
 
-function filterSingleConversation (data, messages) {
+// Filter out messages other than ones from the most recent person that messaged you
+function filterSingleConversation (data, friend) {
   return data.filter(message => {
     const recipient = message.message_create.target.recipient_id;
     const sender = message.message_create.sender_id;
-    return recipient === messages.friend.user_id
-        || sender    === messages.friend.user_id;
+    return recipient === friend.user_id
+        || sender    === friend.user_id;
   });
 }
 
+// Trim down a raw conversation array to the essentials
+  // Each message: text, timestamp, source
+function trimConversation (rawConversation, friend) {
+  const conversation = [];
+
+  for (let i = 0; i < 5; i++) {
+    const message = {
+      text: rawConversation[i].message_create.message_data.text,
+      timestamp: getMessageTimeDiff(rawConversation[i].created_timestamp)
+    };
+
+    const sender = rawConversation[i].message_create.sender_id;
+    if (sender === friend.user_id) message.source = 'friend';
+    else message.source = 'me';
+
+    conversation.push(message);
+  };
+
+  return conversation;
+}
+
+// Calculate the time difference between now and a message; returns long-form timestamp
 function getMessageTimeDiff (timestamp) {
   const now = new Date().valueOf();
   const timeElapsed = Math.round((now - timestamp) / (1000));
   return getTimestampMessage(timeElapsed, 'long');
 }
 
+
+
 /************************************************
   EXECUTE
 ************************************************/
 
 // Store relevant profile information in 'res.profile' object
-app.get(async (req, res, next) => {
+app.get('/', async (req, res, next) => {
   res.profile = {};
   const self = await getFromTwitter('account/verify_credentials');
   res.profile.self = trimSelfInfo(self.data)
@@ -180,7 +205,7 @@ app.get(async (req, res, next) => {
 });
 
 // Using 'res.profile', render the page with PUG
-app.get((req, res, next) => {
+app.get('/', (req, res, next) => {
   res.render('layout.pug', { globals: [res.profile] });
   next();
 });
