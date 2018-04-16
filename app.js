@@ -185,50 +185,87 @@ function getMessageTimeDiff (timestamp) {
 
 // Store relevant profile information in 'res.profile' object
 app.get('/', async (req, res, next) => {
-  res.profile = {};
-  const self = await getFromTwitter('account/verify_credentials');
-  res.profile.self = trimSelfInfo(self.data)
-  next();
+  try {
+    res.profile = {};
+    const self = await getFromTwitter('account/verify_credentials');
+    res.profile.self = trimSelfInfo(self.data)
+    next();
+  } catch (err) {
+    if (!err.message) err.message = 'Problem getting user information from Twitter';
+    err.statusCode = 500;
+    next(err);
+  };
 }, async (req, res, next) => {
-  const timeline = await getFromTwitter('statuses/home_timeline', { count: 5 });
-  res.profile.timeline = trimTimeline(timeline.data);
-  next();
+  try {
+    const timeline = await getFromTwitter('statuses/home_timeline', { count: 5 });
+    res.profile.timeline = trimTimeline(timeline.data);
+    next();
+  } catch (err) {
+    err.message = 'Problem getting timeline from Twitter';
+    err.statusCode = 500;
+    next(err);
+  };
 }, async (req, res, next) => {
-  const following = await getFromTwitter('followers/list', { count: 5 });
-  res.profile.following = trimFollowing(following.data.users);
-  next();
+  try {
+    const following = await getFromTwitter('followers/list', { count: 5 });
+    res.profile.following = trimFollowing(following.data.users);
+    next();
+  } catch (err) {
+    err.message = 'Problem getting followers from Twitter';
+    err.statusCode = 500;
+    next(err);
+  };
 }, async (req, res, next) => {
-  const messages = await getFromTwitter('direct_messages/events/list');
-  res.profile.messages = await trimMessages(messages.data.events, res.profile.self);
-  next();
+  try {
+    const messages = await getFromTwitter('direct_messages/events/list');
+    res.profile.messages = await trimMessages(messages.data.events, res.profile.self);
+    next();
+  } catch (err) {
+    err.message = 'Problem getting direct messages from Twitter';
+    err.statusCode = 500;
+    next(err);
+  };
 });
 
 // Using 'res.profile', render the page with PUG
 app.get('/', (req, res, next) => {
-  app.render('timeline', { globals: [res.profile] });
-  console.log(res.profile.timeline);
-  next();
-}, (req, res, next) => {
-  app.render('following', { globals: [res.profile] });
-  console.log(res.profile.following);
-  next();
-}, (req, res, next) => {
-  res.render('messages', { globals: [res.profile] });
-  console.log(res.profile.messages);
-  next();
+  try {
+    res.render('main', { globals: [res.profile] });
+    next();
+  } catch (err) {
+    err.message = 'There was a problem rendering the page';
+    err.statusCode = 500;
+    next(err);
+  };
 });
 
 
 
 
 // On submission of new Tweet, upload it to Twitter and immediately display in interface
-// app.post((req, res, next) => {})
+app.post('/', (req, res, next) => {
+  console.log(req.body);
+  res.setHeader('Content-Type', 'text/plain')
+  res.write('you posted:\n')
+  res.end(JSON.stringify(req.body, null, 2))
+
+
+
+
+
+  // T.post('statuses/update', { status: 'hello world!' }, function(err, data, response) {
+  //   console.log(data)
+  // })
+});
   // NOTE: Allows users to post a new tweet. exceeds
-  // NOTE: Display a new tweet without having to refresh the page.
+  // NOTE: Display a new tweet without having to refresh the page. (onSubmit is fine)
 
 // Listen on port 3000
-app.listen(3000, () => {console.log('\nListening on port 3000\n')} );
+app.listen(3000, () => { console.log('\nListening on port 3000\n') } );
 
 // Error handler
-app.use((err, req, res, next) => { console.error(err) });
-  // NOTE: Add an ‘error’ route that renders a friendly error page when something goes wrong.
+app.use((err, req, res, next) => {
+  console.error(err);
+  const fakeProfile = { self: { profile_banner_url: '', screen_name: ''} }
+  res.render('error', { globals: [fakeProfile, err] });
+});

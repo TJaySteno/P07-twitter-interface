@@ -1,0 +1,6 @@
+extends layout
+
+block content
+  .error--container
+    h1.error--title Oh No! Something's gone wrong!
+    h2.error--stack= `${err.message} (${err.statusCode})`
