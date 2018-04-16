@@ -42,8 +42,7 @@ function trimSelfInfo (self) {
   return {
     screen_name: `@${self.screen_name}`,
     profile_image_url: self.profile_image_url,
-    profile_background_image_url: self.profile_background_image_url,
-      // NOTE: Displays the user’s profile background image as the site header’s background
+    profile_banner_url: self.profile_banner_url,
     following: self.friends_count
   }
 }
@@ -206,9 +205,21 @@ app.get('/', async (req, res, next) => {
 
 // Using 'res.profile', render the page with PUG
 app.get('/', (req, res, next) => {
-  res.render('layout.pug', { globals: [res.profile] });
+  app.render('timeline', { globals: [res.profile] });
+  console.log(res.profile.timeline);
+  next();
+}, (req, res, next) => {
+  app.render('following', { globals: [res.profile] });
+  console.log(res.profile.following);
+  next();
+}, (req, res, next) => {
+  res.render('messages', { globals: [res.profile] });
+  console.log(res.profile.messages);
   next();
 });
+
+
+
 
 // On submission of new Tweet, upload it to Twitter and immediately display in interface
 // app.post((req, res, next) => {})

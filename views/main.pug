@@ -1,0 +1,9 @@
+extends layout
+
+block content
+  - console.log('main')
+  .bounds.app--body
+    include includes/body-header
+    block timeline
+    block following
+    block messages
