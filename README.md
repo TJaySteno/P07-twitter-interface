@@ -6,3 +6,11 @@ Using Node.js, request information from Twitter and display it in the provided i
 *__Skills:__ Node.js, Express, Pug/Jade, Twitter API*
 
 *__Personal Development Emphasis:__ Further review on async/await and APIs, and experimenting with Express middleware and Pug layouts*
+
+---
+
+### Instructions for Setup
+
+This app uses the Twitter API and therefore requires an API key to use. This is just a simple matter of going to (https://apps.twitter.com)[https://apps.twitter.com] and applying for a free key. Make sure to go to 'Permissions' and give your key access to Read, Write, and Direct Messages, otherwise the app is likely to break down. Once that has been changed, go to 'Keys and Access Tokens' for your unique keys, plug them into the provided file 'config-template.js', and rename that file to 'config.js'.
+
+Then just install dependencies and you're off!
