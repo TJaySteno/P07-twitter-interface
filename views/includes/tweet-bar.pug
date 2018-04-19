@@ -1,9 +1,9 @@
 .app--tweet
-  form(action="", method="post")
+  form(action="/tweet", method="post")
     .circle--fluid
       .circle--fluid--cell.circle--fluid--primary.align-bottom.app--tweet--post
         .app--avatar(style=`background-image: url(${profile.self.profile_image_url})`)
-        textarea.circle--textarea--input#tweet-textarea(placeholder="What's happening?" name="input")
-        strong.app--tweet--char#tweet-char= 280
+        textarea.circle--textarea--input#tweet-textarea(placeholder="What's happening?" name="tweet")
+        strong.app--tweet--char#tweet-char 280
       .circle--fluid--cell.align-bottom
         button.button-primary Tweet

@@ -227,7 +227,7 @@ app.get('/', async (req, res, next) => {
   };
 });
 
-// Using 'res.profile', render the page with PUG
+// By storing 'profile' on response, render the page with PUG
 app.get('/', (req, res, next) => {
   try {
     res.render('main', { globals: [res.profile] });
@@ -239,29 +239,21 @@ app.get('/', (req, res, next) => {
   };
 });
 
-
-
-
 // On submission of new Tweet, upload it to Twitter and immediately display in interface
-app.post('/', (req, res, next) => {
-  console.log(req.body);
-  res.setHeader('Content-Type', 'text/plain')
-  res.write('you posted:\n')
-  res.end(JSON.stringify(req.body, null, 2))
-
-
-
-
-
-  // T.post('statuses/update', { status: 'hello world!' }, function(err, data, response) {
-  //   console.log(data)
-  // })
-});
-  // NOTE: Allows users to post a new tweet. exceeds
-  // NOTE: Display a new tweet without having to refresh the page. (onSubmit is fine)
+// app.post('/tweet', (req, res, next) => {
+//   console.log(req.body);
+//   // res.write('you posted:\n')
+//   // res.end(JSON.stringify(req.body, null, 2))
+//
+//   res.redirect('/');
+//
+//   // T.post('statuses/update', { status: 'hello world!' }, function(err, data, response) {
+//   //   console.log(data)
+//   // })
+// });
 
 // Listen on port 3000
-app.listen(3000, () => { console.log('\nListening on port 3000\n') } );
+app.listen(3000, () => { console.log('\nListening on port 3000\n') });
 
 // Error handler
 app.use((err, req, res, next) => {
