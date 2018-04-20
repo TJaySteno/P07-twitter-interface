@@ -106,37 +106,41 @@ function trimFollowing (users) {
 
 // Trim down 'messages.data' object to the essentials
 async function trimMessages (rawData, self) {
-  const messages = {};
+  try {
+    const messages = {};
 
-  messages.friend = await getFriendInfo(rawData[0].message_create, self);
+    messages.friend = await getFriendInfo(rawData[0].message_create, self);
 
-  const rawConversation = filterSingleConversation(rawData, messages.friend);
-  messages.conversation = trimConversation(rawConversation, messages.friend)
-  messages.conversation.reverse();
+    const rawConversation = filterSingleConversation(rawData, messages.friend);
+    messages.conversation = trimConversation(rawConversation, messages.friend)
+    messages.conversation.reverse();
 
-  return messages;
+    return messages;
+  } catch (err) { next(err) };
 }
 
 /***** MESSAGE FUNCTIONS ***********************/
 
 // Using the most recent message, figure out who the other party is; return an object containing their info
 async function getFriendInfo (message, self) {
-  const recipient = await getFromTwitter('users/lookup', { user_id: message.target.recipient_id });
-  const sender = await getFromTwitter('users/lookup', { user_id: message.sender_id });
+  try {
+    const recipient = await getFromTwitter('users/lookup', { user_id: message.target.recipient_id });
+    const sender = await getFromTwitter('users/lookup', { user_id: message.sender_id });
 
-  if ("@" + recipient.data[0].screen_name === self.screen_name) {
-    return {
-      name: sender.data[0].name,
-      profile_image_url: sender.data[0].profile_image_url,
-      user_id: message.sender_id
+    if ("@" + recipient.data[0].screen_name === self.screen_name) {
+      return {
+        name: sender.data[0].name,
+        profile_image_url: sender.data[0].profile_image_url,
+        user_id: message.sender_id
+      }
+    } else if ("@" + sender.data[0].screen_name === self.screen_name) {
+      return {
+        name: recipient.data[0].name,
+        profile_image_url: recipient.data[0].profile_image_url,
+        user_id: message.target.recipient_id
+      }
     }
-  } else if ("@" + sender.data[0].screen_name === self.screen_name) {
-    return {
-      name: recipient.data[0].name,
-      profile_image_url: recipient.data[0].profile_image_url,
-      user_id: message.target.recipient_id
-    }
-  } else { throw new Error('There was trouble retrieving your messages.') }
+  } catch (err) { next(err) };
 }
 
 // Filter out messages other than ones from the most recent person that messaged you
@@ -192,7 +196,6 @@ app.get('/', async (req, res, next) => {
     next();
   } catch (err) {
     if (!err.message) err.message = 'Problem getting user information from Twitter';
-    err.statusCode = 500;
     next(err);
   };
 }, async (req, res, next) => {
@@ -201,8 +204,7 @@ app.get('/', async (req, res, next) => {
     res.profile.timeline = trimTimeline(timeline.data);
     next();
   } catch (err) {
-    err.message = 'Problem getting timeline from Twitter';
-    err.statusCode = 500;
+    if (!err.message) err.message = 'Problem getting timeline from Twitter';
     next(err);
   };
 }, async (req, res, next) => {
@@ -211,8 +213,7 @@ app.get('/', async (req, res, next) => {
     res.profile.following = trimFollowing(following.data.users);
     next();
   } catch (err) {
-    err.message = 'Problem getting followers from Twitter';
-    err.statusCode = 500;
+    if (!err.message) err.message = 'Problem getting followers from Twitter';
     next(err);
   };
 }, async (req, res, next) => {
@@ -223,10 +224,6 @@ app.get('/', async (req, res, next) => {
     next();
   } catch (err) {
     if (!err.message) err.message = 'Problem getting direct messages from Twitter';
-    if (!err.statusCode) {
-      if (err.code) err.statusCode = err.code;
-      else err.statusCode = 500;
-    }
     next(err);
   };
 });
@@ -261,6 +258,10 @@ app.listen(3000, () => { console.log('\nListening on port 3000\n') });
 
 // Error handler
 app.use((err, req, res, next) => {
+  if (!err.statusCode) {
+    if (err.code) err.statusCode = err.code;
+    else err.statusCode = 500;
+  }
   console.error(err);
   const fakeProfile = { self: { profile_banner_url: '', screen_name: ''} }
   res.render('error', { globals: [fakeProfile, err] });
