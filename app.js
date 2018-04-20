@@ -218,11 +218,15 @@ app.get('/', async (req, res, next) => {
 }, async (req, res, next) => {
   try {
     const messages = await getFromTwitter('direct_messages/events/list');
-    res.profile.messages = await trimMessages(messages.data.events, res.profile.self);
+    if (messages.data.errors) throw messages.data.errors[0];
+    else res.profile.messages = await trimMessages(messages.data.events, res.profile.self);
     next();
   } catch (err) {
-    err.message = 'Problem getting direct messages from Twitter';
-    err.statusCode = 500;
+    if (!err.message) err.message = 'Problem getting direct messages from Twitter';
+    if (!err.statusCode) {
+      if (err.code) err.statusCode = err.code;
+      else err.statusCode = 500;
+    }
     next(err);
   };
 });
