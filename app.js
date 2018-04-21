@@ -12,20 +12,19 @@ const T = new Twit(require('./config'));
 
 const app = express();
 app.use(express.static('public'));
-app.use(bodyParser.json());
 app.set('view engine', 'pug');
 
 /************************************************
   GENERAL FUNCTIONS
 ************************************************/
 
-// General 'twit' query function
+// Generalist twit 'GET' function
 function getFromTwitter (extension, options) {
   return T.get(extension, options, (err, data, res) => data)
     .catch(err => { throw err });
 }
 
-// Format time (passed in seconds) into a readable 'long' or 'short' timestamp
+// Format time into a readable 'long' or 'short' timestamp; 'time' is in seconds
 function getTimestampMessage (time, length) {
   if (time < 60) return time + (length === 'long' ? ' seconds ago' : 's');
   else if (time < 60*60) return Math.round(time/60) + (length === 'long' ? ' minutes ago' : 'm');
@@ -143,7 +142,7 @@ async function getFriendInfo (message, self) {
   } catch (err) { next(err) };
 }
 
-// Filter out messages other than ones from the most recent person that messaged you
+// From an array of all recent messages, return only the ones from a given friend
 function filterSingleConversation (data, friend) {
   return data.filter(message => {
     const recipient = message.message_create.target.recipient_id;
@@ -154,19 +153,17 @@ function filterSingleConversation (data, friend) {
 }
 
 // Trim down a raw conversation array to the essentials
-  // Each message: text, timestamp, source
 function trimConversation (rawConversation, friend) {
   const conversation = [];
 
   for (let i = 0; i < 5; i++) {
-    const message = {
-      text: rawConversation[i].message_create.message_data.text,
-      timestamp: getMessageTimeDiff(rawConversation[i].created_timestamp)
-    };
-
+    const message = {};
     const sender = rawConversation[i].message_create.sender_id;
+
+    message.text = rawConversation[i].message_create.message_data.text;
+    message.timestamp = getMessageTimeDiff(rawConversation[i].created_timestamp);
     if (sender === friend.user_id) message.source = 'friend';
-    else message.source = 'me';
+    else                           message.source = 'me';
 
     conversation.push(message);
   };
@@ -181,8 +178,6 @@ function getMessageTimeDiff (timestamp) {
   return getTimestampMessage(timeElapsed, 'long');
 }
 
-
-
 /************************************************
   EXECUTE
 ************************************************/
@@ -190,6 +185,7 @@ function getMessageTimeDiff (timestamp) {
 // Store relevant profile information in 'res.profile' object
 app.get('/', async (req, res, next) => {
   try {
+    // Get info on user's profile
     res.profile = {};
     const self = await getFromTwitter('account/verify_credentials');
     res.profile.self = trimSelfInfo(self.data)
@@ -200,7 +196,8 @@ app.get('/', async (req, res, next) => {
   };
 }, async (req, res, next) => {
   try {
-    const timeline = await getFromTwitter('statuses/home_timeline', { count: 5 });
+    // Get info on user's tweets
+    const timeline = await getFromTwitter('statuses/user_timeline', { count: 5 });
     res.profile.timeline = trimTimeline(timeline.data);
     next();
   } catch (err) {
@@ -209,6 +206,7 @@ app.get('/', async (req, res, next) => {
   };
 }, async (req, res, next) => {
   try {
+    // Get info on user's followers
     const following = await getFromTwitter('followers/list', { count: 5 });
     res.profile.following = trimFollowing(following.data.users);
     next();
@@ -218,6 +216,7 @@ app.get('/', async (req, res, next) => {
   };
 }, async (req, res, next) => {
   try {
+    // Get info on user's direct messages
     const messages = await getFromTwitter('direct_messages/events/list');
     if (messages.data.errors) throw messages.data.errors[0];
     else res.profile.messages = await trimMessages(messages.data.events, res.profile.self);
@@ -228,7 +227,7 @@ app.get('/', async (req, res, next) => {
   };
 });
 
-// By storing 'profile' on response, render the page with PUG
+// Render the page using the assembled profile info
 app.get('/', (req, res, next) => {
   try {
     res.render('main', { globals: [res.profile] });
@@ -240,20 +239,21 @@ app.get('/', (req, res, next) => {
   };
 });
 
-// On submission of new Tweet, upload it to Twitter and immediately display in interface
-// app.post('/tweet', (req, res, next) => {
-//   console.log(req.body);
-//   // res.write('you posted:\n')
-//   // res.end(JSON.stringify(req.body, null, 2))
-//
-//   res.redirect('/');
-//
-//   // T.post('statuses/update', { status: 'hello world!' }, function(err, data, response) {
-//   //   console.log(data)
-//   // })
-// });
+// Retrieve a tweet from the request parameters, post it to Twitter, and refresh the page
+app.get('/tweet/:encodedTweet', (req, res, next) => {
+  try {
+    const tweet = decodeURI(req.params.encodedTweet);
 
-// Listen on port 3000
+    T.post('statuses/update', { status: tweet }, function(err, data, response) {
+      if (err) throw err;
+      else console.log(`"${data.text}" posted to Twitter`);
+    });
+
+    res.redirect('/');
+  } catch (err) { next(err) }
+});
+
+// View on http://localhost:3000
 app.listen(3000, () => { console.log('\nListening on port 3000\n') });
 
 // Error handler
