@@ -115,7 +115,7 @@ async function trimMessages (rawData, self) {
     messages.conversation.reverse();
 
     return messages;
-  } catch (err) { next(err) };
+  } catch (err) { throw err };
 }
 
 /***** MESSAGE FUNCTIONS ***********************/
@@ -139,7 +139,7 @@ async function getFriendInfo (message, self) {
         user_id: message.target.recipient_id
       }
     }
-  } catch (err) { next(err) };
+  } catch (err) { throw err };
 }
 
 // From an array of all recent messages, return only the ones from a given friend
