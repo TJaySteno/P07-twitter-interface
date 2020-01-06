@@ -6,7 +6,7 @@
 
 const express = require('express');
 const pug = require('pug');
-const bodyParser = require('body-parser')
+const bodyParser = require('body-parser');
 const Twit = require('twit');
 const T = new Twit(require('./config'));
 
@@ -19,39 +19,44 @@ app.set('view engine', 'pug');
 ************************************************/
 
 // Generalist twit 'GET' function
-function getFromTwitter (extension, options) {
+function getFromTwitter(extension, options) {
   return T.get(extension, options, (err, data, res) => data)
-    .catch(err => { throw err });
+    .catch(err => { throw err; });
 }
 
-// Format time into a readable 'long' or 'short' timestamp; 'time' is in seconds
-function getTimestampMessage (time, length) {
-  if (time < 60) return time + (length === 'long' ? ' seconds ago' : 's');
-  else if (time < 60*60) return Math.round(time/60) + (length === 'long' ? ' minutes ago' : 'm');
-  else if (time < 24*60*60) return Math.round(time/(60*60)) + (length === 'long' ? ' hours ago' : 'h');
-  else return Math.round(time/(24*60*60)) + (length === 'long' ? ' days ago' : 'd');
+/* Format time into a readable 'long' or 'short' timestamp; 'time' is in seconds */
+function getTimestampMessage(time, length) {
+  if (time < 60) {
+    return time + (length === 'long' ? ' seconds ago' : 's');
+  } else if (time < 60 * 60) {
+    return Math.round(time / 60) + (length === 'long' ? ' minutes ago' : 'm');
+  } else if (time < 24 * 60 * 60) {
+    return Math.round(time / (60 * 60)) + (length === 'long' ? ' hours ago' : 'h');
+  } else {
+    return Math.round(time / (24 * 60 * 60)) + (length === 'long' ? ' days ago' : 'd');
+  }
 }
 
 /************************************************
   PROFILE.SELF
 ************************************************/
 
-// Trim down 'self.data' object to the essentials
-function trimSelfInfo (self) {
+/* Trim down 'self.data' object to the essentials */
+function trimSelfInfo(self) {
   return {
     screen_name: `@${self.screen_name}`,
     profile_image_url: self.profile_image_url,
     profile_banner_url: self.profile_banner_url,
-    following: self.friends_count
-  }
+    following: self.friends_count,
+  };
 }
 
 /************************************************
   PROFILE.TIMELINE
 ************************************************/
 
-// Trim down 'timeline.data' object to the essentials
-function trimTimeline (tweets) {
+/* Trim down 'timeline.data' object to the essentials */
+function trimTimeline(tweets) {
   const timeline = [];
   tweets.forEach(tweet => {
     timeline.push({
@@ -63,7 +68,7 @@ function trimTimeline (tweets) {
       retweet_count: tweet.retweet_count,
       favorite_count: tweet.favorite_count,
       retweeted: tweet.retweeted,
-      favorited: tweet.favorited
+      favorited: tweet.favorited,
     });
   });
   return timeline;
@@ -71,8 +76,8 @@ function trimTimeline (tweets) {
 
 /***** TIMELINE FUNCTIONS **********************/
 
-// Calculate the time difference between now and a timeline post; returns short-form timestamp
-function getTimelineTimestamp (tweet) {
+/* Calculate the time difference between now and a timeline post; returns short-form timestamp */
+function getTimelineTimestamp(tweet) {
   const now = new Date();
   const offset = tweet.user.utc_offset;
   const timePosted = new Date(tweet.created_at).valueOf()
@@ -85,15 +90,15 @@ function getTimelineTimestamp (tweet) {
   PROFILE.FOLLOWING
 ************************************************/
 
-// Trim down 'following.data' object to the essentials
-function trimFollowing (users) {
+/* Trim down 'following.data' object to the essentials */
+function trimFollowing(users) {
   const following = [];
   users.forEach(user => {
     following.push({
       name: user.name,
       screen_name: `@${user.screen_name}`,
       profile_image_url: user.profile_image_url,
-      following: user.following
+      following: user.following,
     });
   });
   return following;
@@ -103,47 +108,49 @@ function trimFollowing (users) {
   PROFILE.MESSAGES
 ************************************************/
 
-// Trim down 'messages.data' object to the essentials
-async function trimMessages (rawData, self) {
+/* Trim down 'messages.data' object to the essentials */
+async function trimMessages(rawData, self) {
   try {
     const messages = {};
 
     messages.friend = await getFriendInfo(rawData[0].message_create, self);
 
     const rawConversation = filterSingleConversation(rawData, messages.friend);
-    messages.conversation = trimConversation(rawConversation, messages.friend)
+    messages.conversation = trimConversation(rawConversation, messages.friend);
     messages.conversation.reverse();
 
     return messages;
-  } catch (err) { throw err };
+  } catch (err) { throw err; };
 }
 
 /***** MESSAGE FUNCTIONS ***********************/
 
-// Using the most recent message, figure out who the other party is; return an object containing their info
-async function getFriendInfo (message, self) {
+/* Given a DM, find relevant info on a friend */
+async function getFriendInfo(message, self) {
   try {
-    const recipient = await getFromTwitter('users/lookup', { user_id: message.target.recipient_id });
-    const sender = await getFromTwitter('users/lookup', { user_id: message.sender_id });
+    const recipientID = message.target.recipient_id;
+    const senderID = message.sender_id;
+    const recipient = await getFromTwitter('users/lookup', { user_id: recipientID });
+    const sender = await getFromTwitter('users/lookup', { user_id: senderID });
 
-    if ("@" + recipient.data[0].screen_name === self.screen_name) {
+    if ('@' + recipient.data[0].screen_name === self.screen_name) {
       return {
         name: sender.data[0].name,
         profile_image_url: sender.data[0].profile_image_url,
-        user_id: message.sender_id
-      }
-    } else if ("@" + sender.data[0].screen_name === self.screen_name) {
+        user_id: message.sender_id,
+      };
+    } else if ('@' + sender.data[0].screen_name === self.screen_name) {
       return {
         name: recipient.data[0].name,
         profile_image_url: recipient.data[0].profile_image_url,
-        user_id: message.target.recipient_id
-      }
+        user_id: message.target.recipient_id,
+      };
     }
-  } catch (err) { throw err };
+  } catch (err) { throw err; };
 }
 
-// From an array of all recent messages, return only the ones from a given friend
-function filterSingleConversation (data, friend) {
+/* From an array of all recent messages, return only the ones from a given friend */
+function filterSingleConversation(data, friend) {
   return data.filter(message => {
     const recipient = message.message_create.target.recipient_id;
     const sender = message.message_create.sender_id;
@@ -152,8 +159,8 @@ function filterSingleConversation (data, friend) {
   });
 }
 
-// Trim down a raw conversation array to the essentials
-function trimConversation (rawConversation, friend) {
+/* Trim down a raw conversation array to the essentials */
+function trimConversation(rawConversation, friend) {
   const conversation = [];
 
   for (let i = 0; i < 5; i++) {
@@ -163,7 +170,7 @@ function trimConversation (rawConversation, friend) {
     message.text = rawConversation[i].message_create.message_data.text;
     message.timestamp = getMessageTimeDiff(rawConversation[i].created_timestamp);
     if (sender === friend.user_id) message.source = 'friend';
-    else                           message.source = 'me';
+    else message.source = 'me';
 
     conversation.push(message);
   };
@@ -171,8 +178,8 @@ function trimConversation (rawConversation, friend) {
   return conversation;
 }
 
-// Calculate the time difference between now and a message; returns long-form timestamp
-function getMessageTimeDiff (timestamp) {
+/* Calculate the time difference between now and a message; returns long-form timestamp */
+function getMessageTimeDiff(timestamp) {
   const now = new Date().valueOf();
   const timeElapsed = Math.round((now - timestamp) / (1000));
   return getTimestampMessage(timeElapsed, 'long');
@@ -182,13 +189,13 @@ function getMessageTimeDiff (timestamp) {
   EXECUTE
 ************************************************/
 
-// Store relevant profile information in 'res.profile' object
+/* Store relevant profile information in 'res.profile' object */
 app.get('/', async (req, res, next) => {
   try {
-    // Get info on user's profile
+    /* Get info on user's profile */
     res.profile = {};
     const self = await getFromTwitter('account/verify_credentials');
-    res.profile.self = trimSelfInfo(self.data)
+    res.profile.self = trimSelfInfo(self.data);
     next();
   } catch (err) {
     if (!err.message) err.message = 'Problem getting user information from Twitter';
@@ -196,7 +203,7 @@ app.get('/', async (req, res, next) => {
   };
 }, async (req, res, next) => {
   try {
-    // Get info on user's tweets
+    /* Get info on user's tweets */
     const timeline = await getFromTwitter('statuses/user_timeline', { count: 5 });
     res.profile.timeline = trimTimeline(timeline.data);
     next();
@@ -206,7 +213,7 @@ app.get('/', async (req, res, next) => {
   };
 }, async (req, res, next) => {
   try {
-    // Get info on user's followers
+    /* Get info on user's followers */
     const following = await getFromTwitter('followers/list', { count: 5 });
     res.profile.following = trimFollowing(following.data.users);
     next();
@@ -216,7 +223,7 @@ app.get('/', async (req, res, next) => {
   };
 }, async (req, res, next) => {
   try {
-    // Get info on user's direct messages
+    /* Get info on user's direct messages */
     const messages = await getFromTwitter('direct_messages/events/list');
     if (messages.data.errors) throw messages.data.errors[0];
     else res.profile.messages = await trimMessages(messages.data.events, res.profile.self);
@@ -227,8 +234,9 @@ app.get('/', async (req, res, next) => {
   };
 });
 
-// Render the page using the assembled profile info
+/* Render the page using the assembled profile info */
 app.get('/', (req, res, next) => {
+  console.log('/');
   try {
     res.render('main', { globals: [res.profile] });
     next();
@@ -239,30 +247,38 @@ app.get('/', (req, res, next) => {
   };
 });
 
-// Retrieve a tweet from the request parameters, post it to Twitter, and refresh the page
+/* Retrieve a tweet from the request parameters, post it to Twitter, and refresh the page */
 app.get('/tweet/:encodedTweet', (req, res, next) => {
   try {
     const tweet = decodeURI(req.params.encodedTweet);
 
-    T.post('statuses/update', { status: tweet }, function(err, data, response) {
+    T.post('statuses/update', { status: tweet }, function (err, data, response) {
       if (err) throw err;
-      else console.log(`"${data.text}" posted to Twitter`);
+      else console.log(`'${data.text}' posted to Twitter`);
     });
 
     res.redirect('/');
-  } catch (err) { next(err) }
+  } catch (err) { next(err); }
 });
 
-// View on http://localhost:3000
-app.listen(3000, () => { console.log('\nListening on port 3000\n') });
+/* View on http://localhost:3000 */
+app.listen(3000, () => {
+  console.log('\nListening on port 3000\n');
+});
 
-// Error handler
+/* Error handler */
 app.use((err, req, res, next) => {
   if (!err.statusCode) {
     if (err.code) err.statusCode = err.code;
     else err.statusCode = 500;
   }
+
   console.error(err);
-  const fakeProfile = { self: { profile_banner_url: '', screen_name: ''} }
+  const fakeProfile = {
+    self: {
+      profile_banner_url: '',
+      screen_name: '',
+    },
+  };
   res.render('error', { globals: [fakeProfile, err] });
 });
