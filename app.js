@@ -5,8 +5,6 @@
 ************************************************/
 
 const express = require('express');
-const pug = require('pug');
-const bodyParser = require('body-parser');
 const Twit = require('twit');
 const T = new Twit(require('./config'));
 
@@ -172,13 +170,9 @@ function trimConvoData(convoData, friend) {
 
   for (let i = 0; i < 5; i++) {
     const message = {};
-    const sender = convoData[i].message_create.sender_id;
 
     message.text = convoData[i].message_create.message_data.text;
     message.timestamp = getMessageTimeDiff(convoData[i].created_timestamp);
-    // Potentially unused vars
-    // if (sender === friend.user_id) message.source = 'friend';
-    // else message.source = 'me';
 
     conversation.push(message);
   };
